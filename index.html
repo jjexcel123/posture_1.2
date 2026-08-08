@@ -1,0 +1,563 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Posture Rating Dial</title>
+
+  <style>
+    :root {
+      --bg: #09090b;
+      --card: rgba(24, 24, 27, 0.9);
+      --text: #f4f4f5;
+      --muted: #a1a1aa;
+      --good: #22c55e;
+      --meh: #f59e0b;
+      --bad: #ef4444;
+      --line: rgba(255, 255, 255, 0.1);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at 10% 10%, rgba(34, 197, 94, 0.2), transparent 28%),
+        radial-gradient(circle at 90% 0%, rgba(239, 68, 68, 0.16), transparent 30%),
+        var(--bg);
+      color: var(--text);
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+
+    .app {
+      width: min(1120px, 100%);
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 20px;
+    }
+
+    @media (max-width: 860px) {
+      .app {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      padding: 20px;
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.36);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(30px, 5vw, 54px);
+      line-height: 0.95;
+      letter-spacing: -0.04em;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      margin: 10px 0 18px;
+      line-height: 1.4;
+    }
+
+    .video-wrap {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      border-radius: 18px;
+      overflow: hidden;
+      background: #000;
+      border: 1px solid var(--line);
+    }
+
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transform: scaleX(-1);
+    }
+
+    .badge {
+      position: absolute;
+      left: 14px;
+      top: 14px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(0, 0, 0, 0.62);
+      backdrop-filter: blur(10px);
+      font-weight: 900;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    button {
+      border: 0;
+      border-radius: 14px;
+      padding: 12px 16px;
+      font: inherit;
+      font-weight: 900;
+      cursor: pointer;
+      background: #f4f4f5;
+      color: #09090b;
+    }
+
+    button.secondary {
+      background: #27272a;
+      color: var(--text);
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .status {
+      margin-top: 12px;
+      min-height: 44px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.45;
+      white-space: pre-wrap;
+    }
+
+    .dial-card {
+      display: grid;
+      gap: 16px;
+      align-content: start;
+    }
+
+    .dial {
+      width: min(410px, 100%);
+      aspect-ratio: 1 / 0.62;
+      margin: 6px auto 0;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .arc {
+      width: 100%;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      position: absolute;
+      left: 0;
+      top: 0;
+      background:
+        conic-gradient(
+          from 225deg,
+          var(--bad) 0deg 54deg,
+          var(--meh) 54deg 108deg,
+          var(--good) 108deg 180deg,
+          transparent 180deg 360deg
+        );
+      mask: radial-gradient(circle, transparent 0 58%, black 59% 100%);
+      -webkit-mask: radial-gradient(circle, transparent 0 58%, black 59% 100%);
+    }
+
+    .needle {
+      position: absolute;
+      left: 50%;
+      bottom: 0;
+      width: 5px;
+      height: 47%;
+      border-radius: 999px;
+      background: #fff;
+      transform-origin: bottom center;
+      transform: translateX(-50%) rotate(-90deg);
+      transition: transform 160ms ease-out;
+      box-shadow: 0 0 24px rgba(255, 255, 255, 0.55);
+    }
+
+    .hub {
+      position: absolute;
+      left: 50%;
+      bottom: -12px;
+      transform: translateX(-50%);
+      width: 36px;
+      height: 36px;
+      border-radius: 999px;
+      background: #f4f4f5;
+      border: 7px solid #3f3f46;
+    }
+
+    .score {
+      text-align: center;
+      font-size: 76px;
+      line-height: 0.95;
+      font-weight: 1000;
+      letter-spacing: -0.06em;
+    }
+
+    .score small {
+      color: var(--muted);
+      font-size: 24px;
+      letter-spacing: 0;
+    }
+
+    .rating-label {
+      text-align: center;
+      font-size: 28px;
+      font-weight: 1000;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .stats {
+      background: rgba(0, 0, 0, 0.24);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 16px;
+      padding: 14px;
+      display: grid;
+      gap: 9px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .stat {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .stat strong {
+      color: var(--text);
+    }
+
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+
+<body>
+  <main class="app">
+    <section class="card">
+      <h1>Posture Coach</h1>
+      <div class="subtitle">
+        Runs fully in the browser. Camera frames stream to your Roboflow Workflow, and the returned class drives the dial.
+      </div>
+
+      <div class="video-wrap">
+        <video id="video" autoplay playsinline muted></video>
+        <div id="badge" class="badge">Camera off</div>
+      </div>
+
+      <div class="controls">
+        <button id="startBtn">Start camera</button>
+        <button id="stopBtn" class="secondary" disabled>Stop</button>
+      </div>
+
+      <div id="status" class="status">
+        Ready. Click Start camera.
+      </div>
+    </section>
+
+    <section class="card dial-card">
+      <div class="dial">
+        <div class="arc"></div>
+        <div id="needle" class="needle"></div>
+        <div class="hub"></div>
+      </div>
+
+      <div class="score">
+        <span id="score">0</span><small>/100</small>
+      </div>
+
+      <div id="ratingLabel" class="rating-label">Waiting</div>
+
+      <div class="stats">
+        <div class="stat"><strong>Latest class</strong><span id="latestClass">none</span></div>
+        <div class="stat"><strong>Confidence</strong><span id="confidence">0%</span></div>
+        <div class="stat"><strong>Results received</strong><span id="results">0</span></div>
+        <div class="stat"><strong>Mode</strong><span>Browser only</span></div>
+      </div>
+    </section>
+  </main>
+
+  <script type="module">
+    import {
+      connectors,
+      webrtc,
+      streams
+    } from "https://esm.sh/@roboflow/inference-sdk";
+
+    const API_KEY = "rf_8HKdCDRFhRee5DiZNdmbxDo6wDH3";
+
+    const WORKSPACE_NAME = "jj-excel-proton-me";
+    const WORKFLOW_ID = "sitting-posture-vsitting-posture-rofqf-9oepo-1-yolo11n-pose-t1-logic";
+    const IMAGE_INPUT_NAME = "image";
+
+    const DATA_OUTPUT_NAMES = ["predictions"];
+
+    const video = document.getElementById("video");
+    const badge = document.getElementById("badge");
+    const statusEl = document.getElementById("status");
+    const startBtn = document.getElementById("startBtn");
+    const stopBtn = document.getElementById("stopBtn");
+
+    const needle = document.getElementById("needle");
+    const scoreEl = document.getElementById("score");
+    const ratingLabel = document.getElementById("ratingLabel");
+    const latestClassEl = document.getElementById("latestClass");
+    const confidenceEl = document.getElementById("confidence");
+    const resultsEl = document.getElementById("results");
+
+    let localStream = null;
+    let connection = null;
+    let resultCount = 0;
+    let postureRating = 0;
+
+    const classToScore = {
+      good: 95,
+      "good posture": 95,
+
+      meh: 58,
+      "meh posture": 58,
+      okay: 58,
+      ok: 58,
+      neutral: 58,
+
+      bad: 18,
+      "bad posture": 18,
+      poor: 18
+    };
+
+    startBtn.addEventListener("click", start);
+    stopBtn.addEventListener("click", stop);
+
+    async function start() {
+      try {
+        if (!API_KEY || API_KEY === "PASTE_YOUR_ROBOFLOW_API_KEY_HERE") {
+          throw new Error("Paste your Roboflow API key into the API_KEY constant near the top of the script.");
+        }
+
+        startBtn.disabled = true;
+        stopBtn.disabled = false;
+        statusEl.textContent = "Requesting camera permission...";
+        badge.textContent = "Starting...";
+
+        const connector = connectors.withApiKey(API_KEY);
+
+        localStream = await streams.useCamera({
+          video: {
+            facingMode: "user",
+            width: { ideal: 640 },
+            height: { ideal: 480 },
+            frameRate: { ideal: 40, max: 40 }
+          },
+          audio: false
+        });
+
+        video.srcObject = localStream;
+        await video.play();
+
+        statusEl.textContent = "Connecting to Roboflow realtime inference...";
+        badge.textContent = "Connecting";
+
+        connection = await webrtc.useStream({
+          source: localStream,
+          connector,
+          wrtcParams: {
+            workspaceName: WORKSPACE_NAME,
+            workflowId: WORKFLOW_ID,
+            imageInputName: IMAGE_INPUT_NAME,
+            streamOutputNames: [],
+            dataOutputNames: DATA_OUTPUT_NAMES
+          },
+          onData: (data) => {
+            handleWorkflowData(data);
+          }
+        });
+
+        badge.textContent = "Running";
+        statusEl.textContent = "Running. Move into view and sit normally.";
+      } catch (err) {
+        console.error(err);
+        statusEl.textContent =
+          "Error: " + (err?.message || String(err)) +
+          "\n\nIf you opened this file by double-clicking it and the browser blocks camera/network access, host the SAME html file on any HTTPS page or localhost. No backend code is required.";
+        badge.textContent = "Error";
+        startBtn.disabled = false;
+        stopBtn.disabled = true;
+        await cleanup();
+      }
+    }
+
+    async function stop() {
+      statusEl.textContent = "Stopped.";
+      badge.textContent = "Camera off";
+      startBtn.disabled = false;
+      stopBtn.disabled = true;
+      await cleanup();
+    }
+
+    async function cleanup() {
+      try {
+        if (connection) {
+          await connection.cleanup();
+        }
+      } catch (e) {
+        console.warn(e);
+      }
+
+      connection = null;
+
+      if (localStream) {
+        for (const track of localStream.getTracks()) {
+          track.stop();
+        }
+      }
+
+      localStream = null;
+      video.srcObject = null;
+    }
+
+    function handleWorkflowData(data) {
+      resultCount += 1;
+      resultsEl.textContent = resultCount;
+
+      const prediction = extractPosturePrediction(data);
+      updateDial(prediction.className, prediction.confidence);
+
+      statusEl.textContent = "Last result received.";
+    }
+
+    function extractPosturePrediction(data) {
+      const candidates = [];
+
+      walk(data, (node) => {
+        if (!node || typeof node !== "object") return;
+
+        if (typeof node.top === "string") {
+          candidates.push({
+            className: cleanClass(node.top),
+            confidence: toConfidence(node.confidence ?? node.score ?? 1)
+          });
+        }
+
+        if (typeof node.predicted_class === "string") {
+          candidates.push({
+            className: cleanClass(node.predicted_class),
+            confidence: toConfidence(node.confidence ?? node.score ?? 1)
+          });
+        }
+
+        if (typeof node.class === "string") {
+          candidates.push({
+            className: cleanClass(node.class),
+            confidence: toConfidence(node.confidence ?? node.score ?? 1)
+          });
+        }
+
+        if (typeof node.class_name === "string") {
+          candidates.push({
+            className: cleanClass(node.class_name),
+            confidence: toConfidence(node.confidence ?? node.score ?? 1)
+          });
+        }
+
+        if (node.predictions && typeof node.predictions === "object" && !Array.isArray(node.predictions)) {
+          for (const [name, value] of Object.entries(node.predictions)) {
+            if (typeof value === "number") {
+              candidates.push({
+                className: cleanClass(name),
+                confidence: toConfidence(value)
+              });
+            } else if (value && typeof value === "object") {
+              candidates.push({
+                className: cleanClass(name),
+                confidence: toConfidence(value.confidence ?? value.score ?? 0)
+              });
+            }
+          }
+        }
+      });
+
+      const postureCandidates = candidates.filter((candidate) => {
+        return Object.prototype.hasOwnProperty.call(classToScore, candidate.className);
+      });
+
+      const usable = postureCandidates.length ? postureCandidates : candidates;
+
+      if (!usable.length) {
+        return { className: "meh", confidence: 0 };
+      }
+
+      usable.sort((a, b) => b.confidence - a.confidence);
+      return usable[0];
+    }
+
+    function walk(value, visitor) {
+      visitor(value);
+
+      if (Array.isArray(value)) {
+        for (const item of value) {
+          walk(item, visitor);
+        }
+      } else if (value && typeof value === "object") {
+        for (const item of Object.values(value)) {
+          walk(item, visitor);
+        }
+      }
+    }
+
+    function cleanClass(value) {
+      return String(value || "meh")
+        .trim()
+        .toLowerCase()
+        .replace(/_/g, " ");
+    }
+
+    function toConfidence(value) {
+      const n = Number(value);
+      if (!Number.isFinite(n)) return 0;
+      if (n > 1) return Math.max(0, Math.min(1, n / 100));
+      return Math.max(0, Math.min(1, n));
+    }
+
+    function updateDial(className, confidence) {
+      const rawScore = classToScore[className] ?? 58;
+
+      const confidenceAdjusted = rawScore * confidence + 58 * (1 - confidence);
+
+      postureRating = postureRating * 0.82 + confidenceAdjusted * 0.18;
+      const rating = Math.round(postureRating);
+
+      scoreEl.textContent = rating;
+      latestClassEl.textContent = className;
+      confidenceEl.textContent = Math.round(confidence * 100) + "%";
+
+      let label = "Meh posture";
+      let color = "var(--meh)";
+
+      if (rating >= 75) {
+        label = "Good posture";
+        color = "var(--good)";
+      } else if (rating < 40) {
+        label = "Bad posture";
+        color = "var(--bad)";
+      }
+
+      ratingLabel.textContent = label;
+      ratingLabel.style.color = color;
+      badge.textContent = label;
+
+      const angle = -90 + (rating / 100) * 180;
+      needle.style.transform = "translateX(-50%) rotate(" + angle + "deg)";
+    }
+  </script>
+</body>
+</html>
